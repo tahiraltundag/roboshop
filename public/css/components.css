@@ -208,21 +208,27 @@
     border-bottom: 1px solid var(--border-color);
     transform: translateY(-100%);
     opacity: 0;
+    pointer-events: none;
     transition: all var(--transition-base);
     z-index: 999;
   }
   .nav-links.active {
     transform: translateY(0);
     opacity: 1;
+    pointer-events: auto;
   }
 }
 
 @media (max-width: 400px) {
-  .nav-logo span:not(.logo-icon) {
-    display: none;
-  }
   .nav-actions {
-    gap: 2px;
+    gap: 4px;
+  }
+  .nav-logo span {
+    display: block;
+    font-size: 0.9rem;
+  }
+  .nav-logo .logo-icon {
+    font-size: 1.1rem;
   }
 }
 
