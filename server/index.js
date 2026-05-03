@@ -56,6 +56,6 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
 });
 
-app.listen(PORT, () => {
-  console.log(`\n🤖 RoboShop sunucusu çalışıyor: http://localhost:${PORT}\n`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`\n🤖 RoboShop sunucusu çalışıyor: http://0.0.0.0:${PORT}\n`);
 });
