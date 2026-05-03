@@ -193,6 +193,9 @@
 
 @media (max-width: 768px) {
   .nav-toggle { display: block; }
+  .nav-actions { gap: var(--space-xs); }
+  .nav-logo { font-size: 1.1rem; gap: var(--space-xs); }
+  .nav-logo .logo-icon { font-size: 1.3rem; }
   .nav-links {
     position: fixed;
     top: var(--nav-height);
@@ -211,6 +214,15 @@
   .nav-links.active {
     transform: translateY(0);
     opacity: 1;
+  }
+}
+
+@media (max-width: 400px) {
+  .nav-logo span:not(.logo-icon) {
+    display: none;
+  }
+  .nav-actions {
+    gap: 2px;
   }
 }
 
