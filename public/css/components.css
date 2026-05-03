@@ -9,7 +9,7 @@
   left: 0;
   right: 0;
   height: var(--nav-height);
-  background: rgba(10, 10, 15, 0.85);
+  background: var(--bg-card);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border-bottom: 1px solid var(--border-color);
@@ -18,7 +18,7 @@
 }
 
 .navbar.scrolled {
-  background: rgba(10, 10, 15, 0.95);
+  background: var(--bg-secondary);
   box-shadow: var(--shadow-md);
 }
 
