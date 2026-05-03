@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Paneli | RoboShop</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🤖</text></svg>">
+  <link rel="stylesheet" href="/css/index.css">
+  <link rel="stylesheet" href="/css/components.css">
+  <style>
+    .admin-layout { padding: var(--space-2xl) 0; }
+    .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-lg); margin-bottom: var(--space-2xl); }
+    .stat-card { text-align: center; }
+    .stat-card .stat-value { font-family: var(--font-display); font-size: 2rem; font-weight: 800; margin-bottom: var(--space-xs); }
+    .stat-card .stat-label { color: var(--text-muted); font-size: 0.85rem; }
+    .admin-section { margin-bottom: var(--space-2xl); }
+    .admin-section h2 { font-family: var(--font-display); font-size: 1.3rem; margin-bottom: var(--space-lg); }
+    .admin-toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-lg); flex-wrap: wrap; gap: var(--space-md); }
+    @media (max-width: 768px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } }
+  </style>
+</head>
+<body>
+  <header class="navbar" id="navbar"></header>
+  <div class="page-header">
+    <div class="container">
+      <div class="breadcrumb"><a href="/">Ana Sayfa</a> <span>/</span> <span>Admin Paneli</span></div>
+      <h1>Admin <span class="text-gradient">Paneli</span></h1>
+    </div>
+  </div>
+
+  <main class="container admin-layout" id="adminContent">
+    <div class="spinner"></div>
+  </main>
+
+  <!-- Product Edit Modal -->
+  <div class="modal-overlay" id="productModal">
+    <div class="modal" style="max-width:600px">
+      <div class="modal-header"><h3 id="productModalTitle">Ürün Düzenle</h3><button class="modal-close" onclick="closeProductModal()">✕</button></div>
+      <div class="modal-body" id="productModalBody"></div>
+    </div>
+  </div>
+
+  <footer class="footer" id="footer"></footer>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/app.js"></script>
+  <script>
+    const statusMap = { pending: '⏳ Beklemede', processing: '🔄 Hazırlanıyor', shipped: '🚚 Kargoda', delivered: '✅ Teslim Edildi', cancelled: '❌ İptal' };
+
+    async function initAdmin() {
+      const user = getUser();
+      if (!user || user.role !== 'admin') { window.location.href = '/'; return; }
+
+      const content = document.getElementById('adminContent');
+
+      try {
+        const [stats, products, orders, categories] = await Promise.all([
+          api.getStats(), api.getProducts({ limit: 100 }), api.getOrders(), api.getCategories()
+        ]);
+
+        content.innerHTML = `
+          <!-- Stats -->
+          <div class="stats-grid">
+            <div class="glass-card stat-card"><div class="stat-value text-gradient">${stats.products}</div><div class="stat-label">Toplam Ürün</div></div>
+            <div class="glass-card stat-card"><div class="stat-value text-gradient">${stats.orders}</div><div class="stat-label">Toplam Sipariş</div></div>
+            <div class="glass-card stat-card"><div class="stat-value text-gradient">${stats.users}</div><div class="stat-label">Kullanıcılar</div></div>
+            <div class="glass-card stat-card"><div class="stat-value text-gradient">${formatPrice(stats.revenue)}</div><div class="stat-label">Toplam Gelir</div></div>
+          </div>
+
+          <!-- Orders -->
+          <div class="admin-section">
+            <h2>📦 Son Siparişler</h2>
+            <div class="glass-card" style="padding:0;overflow:hidden">
+              <div class="table-wrapper">
+                <table class="data-table">
+                  <thead><tr><th>ID</th><th>Müşteri</th><th>Toplam</th><th>Durum</th><th>Tarih</th><th>İşlem</th></tr></thead>
+                  <tbody>
+                    ${orders.orders.slice(0, 20).map(o => `
+                      <tr>
+                        <td><strong>#${o.id}</strong></td>
+                        <td>${o.user_name || '-'}<br><span style="color:var(--text-muted);font-size:0.8rem">${o.user_email || ''}</span></td>
+                        <td style="color:var(--accent-blue);font-weight:600">${formatPrice(o.total)}</td>
+                        <td>
+                          <select onchange="updateStatus(${o.id}, this.value)" style="background:var(--bg-tertiary);color:var(--text-primary);border:1px solid var(--border-color);border-radius:var(--radius-sm);padding:0.3rem;font-size:0.8rem">
+                            ${['pending','processing','shipped','delivered','cancelled'].map(s => `<option value="${s}" ${o.status === s ? 'selected' : ''}>${statusMap[s]}</option>`).join('')}
+                          </select>
+                        </td>
+                        <td style="font-size:0.85rem;color:var(--text-muted)">${new Date(o.created_at).toLocaleDateString('tr-TR')}</td>
+                        <td><button class="btn btn-sm btn-secondary" onclick="viewOrder(${o.id})">Detay</button></td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Products -->
+          <div class="admin-section">
+            <div class="admin-toolbar">
+              <h2 style="margin:0">🤖 Ürün Yönetimi</h2>
+              <button class="btn btn-primary btn-sm" onclick="showAddProduct()">+ Yeni Ürün</button>
+            </div>
+            <div class="glass-card" style="padding:0;overflow:hidden">
+              <div class="table-wrapper">
+                <table class="data-table">
+                  <thead><tr><th>ID</th><th>Ürün</th><th>Kategori</th><th>Fiyat</th><th>Stok</th><th>Puan</th><th>İşlem</th></tr></thead>
+                  <tbody>
+                    ${products.products.map(p => `
+                      <tr>
+                        <td>#${p.id}</td>
+                        <td><strong>${p.name}</strong></td>
+                        <td style="font-size:0.85rem">${p.category_name}</td>
+                        <td style="color:var(--accent-blue)">${formatPrice(p.discount_price || p.price)}</td>
+                        <td><span class="badge ${p.stock > 0 ? 'badge-green' : 'badge-red'}">${p.stock}</span></td>
+                        <td>${starsHTML(p.rating)}</td>
+                        <td>
+                          <button class="btn btn-sm btn-secondary" onclick="editProduct(${p.id})">✏️</button>
+                          <button class="btn btn-sm btn-danger" onclick="deleteProduct(${p.id}, '${p.name.replace(/'/g, "\\'")}')">🗑️</button>
+                        </td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        `;
+      } catch (err) {
+        content.innerHTML = '<p style="color:var(--accent-red)">Admin verileri yüklenemedi: ' + err.message + '</p>';
+      }
+    }
+
+    async function updateStatus(id, status) {
+      try { await api.updateOrderStatus(id, status); showToast('Sipariş durumu güncellendi.', 'success'); } catch (err) { showToast(err.message, 'error'); }
+    }
+
+    async function viewOrder(id) {
+      try {
+        const data = await api.getOrder(id);
+        document.getElementById('productModalTitle').textContent = `Sipariş #${data.order.id}`;
+        document.getElementById('productModalBody').innerHTML = `
+          <p><strong>Müşteri:</strong> ${data.order.shipping_name}</p>
+          <p><strong>Telefon:</strong> ${data.order.shipping_phone}</p>
+          <p><strong>Adres:</strong> ${data.order.shipping_address}, ${data.order.shipping_city}</p>
+          <hr style="border-color:var(--border-color);margin:var(--space-md) 0">
+          ${data.items.map(i => `<div style="display:flex;justify-content:space-between;padding:0.4rem 0"><span>${i.product_name} x${i.quantity}</span><span style="color:var(--accent-blue)">${formatPrice(i.price*i.quantity)}</span></div>`).join('')}
+          <div style="display:flex;justify-content:space-between;padding:var(--space-md) 0;font-weight:800;border-top:2px solid var(--border-color);margin-top:var(--space-md)"><span>Toplam</span><span style="color:var(--accent-blue)">${formatPrice(data.order.total)}</span></div>
+        `;
+        document.getElementById('productModal').classList.add('active');
+      } catch (err) { showToast(err.message, 'error'); }
+    }
+
+    function showAddProduct() {
+      document.getElementById('productModalTitle').textContent = 'Yeni Ürün Ekle';
+      document.getElementById('productModalBody').innerHTML = productFormHTML();
+      document.getElementById('productModal').classList.add('active');
+    }
+
+    async function editProduct(id) {
+      try {
+        const data = await api.getProduct(id);
+        const p = data.product;
+        document.getElementById('productModalTitle').textContent = 'Ürün Düzenle';
+        document.getElementById('productModalBody').innerHTML = productFormHTML(p);
+        document.getElementById('productModal').classList.add('active');
+      } catch (err) { showToast(err.message, 'error'); }
+    }
+
+    function productFormHTML(p = {}) {
+      return `
+        <form onsubmit="saveProduct(event, ${p.id || 'null'})">
+          <div class="form-group"><label class="form-label">Ürün Adı</label><input class="form-input" id="pName" value="${p.name || ''}" required></div>
+          <div class="form-group"><label class="form-label">Kategori ID</label><input class="form-input" type="number" id="pCategory" value="${p.category_id || 1}" required></div>
+          <div class="form-group"><label class="form-label">Fiyat (₺)</label><input class="form-input" type="number" id="pPrice" value="${p.price || ''}" required></div>
+          <div class="form-group"><label class="form-label">İndirimli Fiyat (₺)</label><input class="form-input" type="number" id="pDiscount" value="${p.discount_price || ''}"></div>
+          <div class="form-group"><label class="form-label">Stok</label><input class="form-input" type="number" id="pStock" value="${p.stock || 0}"></div>
+          <div class="form-group"><label class="form-label">Açıklama</label><textarea class="form-textarea" id="pDesc">${p.description || ''}</textarea></div>
+          <div class="form-group"><label class="form-label"><input type="checkbox" id="pFeatured" ${p.featured ? 'checked' : ''}> Öne Çıkan</label></div>
+          <button type="submit" class="btn btn-primary" style="width:100%">💾 Kaydet</button>
+        </form>
+      `;
+    }
+
+    async function saveProduct(e, id) {
+      e.preventDefault();
+      const data = {
+        name: document.getElementById('pName').value,
+        category_id: parseInt(document.getElementById('pCategory').value),
+        price: parseFloat(document.getElementById('pPrice').value),
+        discount_price: document.getElementById('pDiscount').value ? parseFloat(document.getElementById('pDiscount').value) : null,
+        stock: parseInt(document.getElementById('pStock').value),
+        description: document.getElementById('pDesc').value,
+        featured: document.getElementById('pFeatured').checked
+      };
+      try {
+        if (id) { await api.updateProduct(id, data); showToast('Ürün güncellendi.', 'success'); }
+        else { await api.createProduct(data); showToast('Ürün oluşturuldu.', 'success'); }
+        closeProductModal();
+        initAdmin();
+      } catch (err) { showToast(err.message, 'error'); }
+    }
+
+    async function deleteProduct(id, name) {
+      if (!confirm(`"${name}" silinecek. Emin misiniz?`)) return;
+      try { await api.deleteProduct(id); showToast('Ürün silindi.', 'success'); initAdmin(); } catch (err) { showToast(err.message, 'error'); }
+    }
+
+    function closeProductModal() { document.getElementById('productModal').classList.remove('active'); }
+    document.getElementById('productModal').addEventListener('click', (e) => { if (e.target === e.currentTarget) closeProductModal(); });
+
+    document.addEventListener('DOMContentLoaded', initAdmin);
+  </script>
+</body>
+</html>

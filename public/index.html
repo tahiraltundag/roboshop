@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="RoboShop - Türkiye'nin lider robotik cihaz platformu. Endüstriyel robot kollar, droneler, AI kitleri ve daha fazlası.">
+  <title>RoboShop | Robotik Cihaz Mağazası</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🤖</text></svg>">
+  <link rel="stylesheet" href="/css/index.css">
+  <link rel="stylesheet" href="/css/components.css">
+</head>
+<body>
+  <header class="navbar" id="navbar"></header>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-bg">
+      <canvas id="particleCanvas"></canvas>
+      <div class="hero-glow hero-glow-1"></div>
+      <div class="hero-glow hero-glow-2"></div>
+    </div>
+    <div class="container">
+      <div class="hero-content">
+        <div class="hero-badge">⚡ Yeni Nesil Robotik Teknolojiler</div>
+        <h1>Geleceğin <span class="text-gradient">Robotik</span> Teknolojileri Burada</h1>
+        <p>Endüstriyel robot kollarından AI geliştirme kitlerine, drone sistemlerinden biyonik protezlere kadar en ileri robotik çözümleri keşfedin.</p>
+        <div class="hero-actions">
+          <a href="/products.html" class="btn btn-primary btn-lg">🛍️ Ürünleri Keşfet</a>
+          <a href="#categories" class="btn btn-secondary btn-lg">📂 Kategoriler</a>
+        </div>
+        <div class="hero-stats">
+          <div><div class="hero-stat-value" data-count="250">0</div><div class="hero-stat-label">Ürün Çeşidi</div></div>
+          <div><div class="hero-stat-value" data-count="15000">0</div><div class="hero-stat-label">Mutlu Müşteri</div></div>
+          <div><div class="hero-stat-value" data-count="98">0</div><div class="hero-stat-label">% Memnuniyet</div></div>
+          <div><div class="hero-stat-value" data-count="24">0</div><div class="hero-stat-label">Saat Destek</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CATEGORIES -->
+  <section class="section" id="categories">
+    <div class="container">
+      <div class="text-center">
+        <h2 class="section-title text-gradient">Kategoriler</h2>
+        <p class="section-subtitle">İhtiyacınıza uygun robotik çözümü bulun</p>
+      </div>
+      <div class="grid grid-4" id="categoryGrid">
+        <div class="spinner"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FEATURED PRODUCTS -->
+  <section class="section" style="background:var(--bg-secondary)">
+    <div class="container">
+      <div class="text-center">
+        <h2 class="section-title text-gradient">Öne Çıkan Ürünler</h2>
+        <p class="section-subtitle">En çok tercih edilen robotik cihazlar</p>
+      </div>
+      <div class="grid grid-4" id="featuredGrid">
+        <div class="spinner"></div>
+      </div>
+      <div class="text-center" style="margin-top:var(--space-2xl)">
+        <a href="/products.html" class="btn btn-secondary btn-lg">Tüm Ürünleri Gör →</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- WHY US -->
+  <section class="section">
+    <div class="container">
+      <div class="text-center">
+        <h2 class="section-title text-gradient">Neden RoboShop?</h2>
+        <p class="section-subtitle">Size en iyi deneyimi sunmak için buradayız</p>
+      </div>
+      <div class="grid grid-4">
+        <div class="glass-card text-center"><div style="font-size:2.5rem;margin-bottom:1rem">🔒</div><h3 style="margin-bottom:0.5rem">Güvenli Alışveriş</h3><p style="color:var(--text-muted);font-size:0.9rem">256-bit SSL şifreleme ile güvenli ödeme altyapısı</p></div>
+        <div class="glass-card text-center"><div style="font-size:2.5rem;margin-bottom:1rem">🚚</div><h3 style="margin-bottom:0.5rem">Hızlı Kargo</h3><p style="color:var(--text-muted);font-size:0.9rem">Siparişleriniz 24 saat içinde kargoya verilir</p></div>
+        <div class="glass-card text-center"><div style="font-size:2.5rem;margin-bottom:1rem">🛡️</div><h3 style="margin-bottom:0.5rem">2 Yıl Garanti</h3><p style="color:var(--text-muted);font-size:0.9rem">Tüm ürünlerde 2 yıl resmi garanti</p></div>
+        <div class="glass-card text-center"><div style="font-size:2.5rem;margin-bottom:1rem">💬</div><h3 style="margin-bottom:0.5rem">7/24 Destek</h3><p style="color:var(--text-muted);font-size:0.9rem">Uzman teknik ekibimiz her zaman yanınızda</p></div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer" id="footer"></footer>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/app.js"></script>
+  <script>
+    // Particle animation
+    function initParticles() {
+      const canvas = document.getElementById('particleCanvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+
+      const particles = [];
+      for (let i = 0; i < 80; i++) {
+        particles.push({
+          x: Math.random() * canvas.width,
+          y: Math.random() * canvas.height,
+          vx: (Math.random() - 0.5) * 0.5,
+          vy: (Math.random() - 0.5) * 0.5,
+          r: Math.random() * 2 + 0.5,
+          alpha: Math.random() * 0.5 + 0.1
+        });
+      }
+
+      function animate() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        particles.forEach((p, i) => {
+          p.x += p.vx; p.y += p.vy;
+          if (p.x < 0 || p.x > canvas.width) p.vx *= -1;
+          if (p.y < 0 || p.y > canvas.height) p.vy *= -1;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(0, 212, 255, ${p.alpha})`;
+          ctx.fill();
+
+          // Connect nearby particles
+          for (let j = i + 1; j < particles.length; j++) {
+            const dx = p.x - particles[j].x;
+            const dy = p.y - particles[j].y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < 150) {
+              ctx.beginPath();
+              ctx.moveTo(p.x, p.y);
+              ctx.lineTo(particles[j].x, particles[j].y);
+              ctx.strokeStyle = `rgba(0, 212, 255, ${0.1 * (1 - dist / 150)})`;
+              ctx.stroke();
+            }
+          }
+        });
+        requestAnimationFrame(animate);
+      }
+      animate();
+
+      window.addEventListener('resize', () => {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+      });
+    }
+
+    // Counter animation
+    function animateCounters() {
+      document.querySelectorAll('[data-count]').forEach(el => {
+        const target = parseInt(el.dataset.count);
+        const duration = 2000;
+        const start = performance.now();
+        function step(timestamp) {
+          const progress = Math.min((timestamp - start) / duration, 1);
+          const eased = 1 - Math.pow(1 - progress, 3);
+          el.textContent = Math.floor(target * eased).toLocaleString('tr-TR');
+          if (progress < 1) requestAnimationFrame(step);
+          else el.textContent = target.toLocaleString('tr-TR');
+        }
+        requestAnimationFrame(step);
+      });
+    }
+
+    // Load categories
+    async function loadCategories() {
+      try {
+        const data = await api.getCategories();
+        const grid = document.getElementById('categoryGrid');
+        grid.innerHTML = data.categories.map(cat => `
+          <a href="/products.html?category=${cat.slug}" class="category-card" style="text-decoration:none;color:inherit">
+            <div class="category-icon">${cat.icon}</div>
+            <div class="category-name">${cat.name}</div>
+            <div class="category-count">${cat.product_count} ürün</div>
+          </a>
+        `).join('');
+      } catch (err) {
+        document.getElementById('categoryGrid').innerHTML = '<p>Kategoriler yüklenemedi.</p>';
+      }
+    }
+
+    // Load featured products
+    async function loadFeatured() {
+      try {
+        const data = await api.getFeatured();
+        const grid = document.getElementById('featuredGrid');
+        grid.innerHTML = data.products.map(p => productCardHTML(p)).join('');
+      } catch (err) {
+        document.getElementById('featuredGrid').innerHTML = '<p>Ürünler yüklenemedi.</p>';
+      }
+    }
+
+    // Observer for counter animation
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => { if (entry.isIntersecting) { animateCounters(); observer.disconnect(); } });
+    });
+
+    document.addEventListener('DOMContentLoaded', () => {
+      initParticles();
+      loadCategories();
+      loadFeatured();
+      const statsEl = document.querySelector('.hero-stats');
+      if (statsEl) observer.observe(statsEl);
+    });
+  </script>
+</body>
+</html>

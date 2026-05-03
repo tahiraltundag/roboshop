@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Giriş / Kayıt | RoboShop</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🤖</text></svg>">
+  <link rel="stylesheet" href="/css/index.css">
+  <link rel="stylesheet" href="/css/components.css">
+  <style>
+    .auth-page { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding-top: var(--nav-height); position: relative; overflow: hidden; }
+    .auth-page::before { content: ''; position: absolute; top: 20%; right: -100px; width: 500px; height: 500px; background: var(--accent-blue); border-radius: 50%; filter: blur(150px); opacity: 0.1; }
+    .auth-page::after { content: ''; position: absolute; bottom: 10%; left: -100px; width: 400px; height: 400px; background: var(--accent-purple); border-radius: 50%; filter: blur(150px); opacity: 0.1; }
+    .auth-card { position: relative; z-index: 1; width: 100%; max-width: 440px; margin: var(--space-2xl); }
+    .auth-header { text-align: center; margin-bottom: var(--space-xl); }
+    .auth-header .logo { font-family: var(--font-display); font-size: 1.8rem; font-weight: 900; margin-bottom: var(--space-md); }
+    .auth-tabs { display: flex; margin-bottom: var(--space-xl); border-radius: var(--radius-md); overflow: hidden; border: 1px solid var(--border-color); }
+    .auth-tab { flex: 1; padding: 0.75rem; text-align: center; background: var(--bg-tertiary); color: var(--text-muted); border: none; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all var(--transition-fast); font-family: var(--font-body); }
+    .auth-tab.active { background: var(--gradient-primary); color: #fff; }
+    .auth-form { display: none; }
+    .auth-form.active { display: block; animation: fadeIn 0.3s ease; }
+    .auth-divider { text-align: center; color: var(--text-muted); font-size: 0.85rem; margin: var(--space-lg) 0; position: relative; }
+    .auth-divider::before, .auth-divider::after { content: ''; position: absolute; top: 50%; width: 40%; height: 1px; background: var(--border-color); }
+    .auth-divider::before { left: 0; }
+    .auth-divider::after { right: 0; }
+    .auth-footer { text-align: center; margin-top: var(--space-lg); color: var(--text-muted); font-size: 0.85rem; }
+  </style>
+</head>
+<body>
+  <header class="navbar" id="navbar"></header>
+
+  <div class="auth-page">
+    <div class="auth-card glass-card">
+      <div class="auth-header">
+        <div class="logo">🤖 <span class="text-gradient">ROBOSHOP</span></div>
+        <p style="color:var(--text-muted)">Robotik dünyaya hoş geldiniz</p>
+      </div>
+
+      <div class="auth-tabs">
+        <button class="auth-tab active" onclick="switchAuthTab('login')">Giriş Yap</button>
+        <button class="auth-tab" onclick="switchAuthTab('register')">Kayıt Ol</button>
+      </div>
+
+      <!-- Login Form -->
+      <form class="auth-form active" id="loginForm" onsubmit="handleLogin(event)">
+        <div class="form-group">
+          <label class="form-label">E-posta</label>
+          <input type="email" class="form-input" id="loginEmail" placeholder="ornek@email.com" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Şifre</label>
+          <input type="password" class="form-input" id="loginPassword" placeholder="••••••••" required>
+        </div>
+        <button type="submit" class="btn btn-primary" style="width:100%;padding:0.85rem" id="loginBtn">🔐 Giriş Yap</button>
+        <div class="auth-divider">veya</div>
+        <div style="text-align:center;font-size:0.85rem;color:var(--text-muted)">
+          <p>Demo: <strong>demo@roboshop.com</strong> / <strong>User123!</strong></p>
+          <p>Admin: <strong>admin@roboshop.com</strong> / <strong>Admin123!</strong></p>
+        </div>
+      </form>
+
+      <!-- Register Form -->
+      <form class="auth-form" id="registerForm" onsubmit="handleRegister(event)">
+        <div class="form-group">
+          <label class="form-label">Ad Soyad</label>
+          <input type="text" class="form-input" id="registerName" placeholder="Adınız Soyadınız" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">E-posta</label>
+          <input type="email" class="form-input" id="registerEmail" placeholder="ornek@email.com" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Şifre (min 6 karakter)</label>
+          <input type="password" class="form-input" id="registerPassword" placeholder="••••••••" minlength="6" required>
+        </div>
+        <button type="submit" class="btn btn-primary" style="width:100%;padding:0.85rem" id="registerBtn">🚀 Kayıt Ol</button>
+      </form>
+
+      <div class="auth-footer">
+        <a href="/">← Ana Sayfaya Dön</a>
+      </div>
+    </div>
+  </div>
+
+  <footer class="footer" id="footer"></footer>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/app.js"></script>
+  <script>
+    // Redirect if already logged in
+    if (getUser()) window.location.href = '/';
+
+    function switchAuthTab(tab) {
+      document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.auth-form').forEach(f => f.classList.remove('active'));
+      if (tab === 'login') {
+        document.querySelectorAll('.auth-tab')[0].classList.add('active');
+        document.getElementById('loginForm').classList.add('active');
+      } else {
+        document.querySelectorAll('.auth-tab')[1].classList.add('active');
+        document.getElementById('registerForm').classList.add('active');
+      }
+    }
+
+    async function handleLogin(e) {
+      e.preventDefault();
+      const btn = document.getElementById('loginBtn');
+      btn.disabled = true; btn.textContent = '⏳ Giriş yapılıyor...';
+      try {
+        const data = await api.login({
+          email: document.getElementById('loginEmail').value,
+          password: document.getElementById('loginPassword').value
+        });
+        setToken(data.token);
+        setUser(data.user);
+        showToast(`Hoş geldiniz, ${data.user.name}!`, 'success');
+        setTimeout(() => window.location.href = '/', 1000);
+      } catch (err) {
+        showToast(err.message, 'error');
+        btn.disabled = false; btn.textContent = '🔐 Giriş Yap';
+      }
+    }
+
+    async function handleRegister(e) {
+      e.preventDefault();
+      const btn = document.getElementById('registerBtn');
+      btn.disabled = true; btn.textContent = '⏳ Kayıt olunuyor...';
+      try {
+        const data = await api.register({
+          name: document.getElementById('registerName').value,
+          email: document.getElementById('registerEmail').value,
+          password: document.getElementById('registerPassword').value
+        });
+        setToken(data.token);
+        setUser(data.user);
+        showToast('Kayıt başarılı! Hoş geldiniz!', 'success');
+        setTimeout(() => window.location.href = '/', 1000);
+      } catch (err) {
+        showToast(err.message, 'error');
+        btn.disabled = false; btn.textContent = '🚀 Kayıt Ol';
+      }
+    }
+  </script>
+</body>
+</html>

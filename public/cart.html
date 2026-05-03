@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sepetim | RoboShop</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🤖</text></svg>">
+  <link rel="stylesheet" href="/css/index.css">
+  <link rel="stylesheet" href="/css/components.css">
+  <style>
+    .cart-layout { display: grid; grid-template-columns: 1fr 360px; gap: var(--space-xl); padding: var(--space-2xl) 0; }
+    .cart-item { display: flex; gap: var(--space-lg); padding: var(--space-lg); border-bottom: 1px solid var(--border-color); align-items: center; }
+    .cart-item-img { width: 100px; height: 100px; background: var(--gradient-card); border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0; }
+    .cart-item-img img { width: 100%; height: 100%; object-fit: cover; }
+    .cart-item-info { flex: 1; }
+    .cart-item-name { font-weight: 600; margin-bottom: var(--space-xs); cursor: pointer; }
+    .cart-item-name:hover { color: var(--accent-blue); }
+    .cart-item-price { color: var(--accent-blue); font-family: var(--font-display); font-weight: 700; }
+    .cart-item-actions { display: flex; align-items: center; gap: var(--space-sm); }
+    .cart-summary { position: sticky; top: calc(var(--nav-height) + 1rem); }
+    .summary-row { display: flex; justify-content: space-between; padding: 0.6rem 0; font-size: 0.95rem; }
+    .summary-total { font-size: 1.3rem; font-weight: 800; border-top: 2px solid var(--border-color); padding-top: var(--space-md); margin-top: var(--space-md); }
+    .summary-total .total-price { color: var(--accent-blue); font-family: var(--font-display); }
+    @media (max-width: 768px) { .cart-layout { grid-template-columns: 1fr; } .cart-summary { position: static; } }
+  </style>
+</head>
+<body>
+  <header class="navbar" id="navbar"></header>
+
+  <div class="page-header">
+    <div class="container">
+      <div class="breadcrumb"><a href="/">Ana Sayfa</a> <span>/</span> <span>Sepetim</span></div>
+      <h1>Alışveriş <span class="text-gradient">Sepetim</span></h1>
+    </div>
+  </div>
+
+  <main class="container">
+    <div class="cart-layout">
+      <div>
+        <div id="cartItems"><div class="spinner"></div></div>
+      </div>
+      <div class="cart-summary glass-card" id="cartSummary" style="display:none">
+        <h3 style="margin-bottom:var(--space-lg);font-family:var(--font-display)">Sipariş Özeti</h3>
+        <div id="summaryContent"></div>
+        <a href="/checkout.html" class="btn btn-primary" style="width:100%;margin-top:var(--space-lg)">💳 Ödemeye Geç</a>
+        <button class="btn btn-secondary" style="width:100%;margin-top:var(--space-sm)" onclick="clearCartAll()">🗑️ Sepeti Temizle</button>
+      </div>
+    </div>
+  </main>
+
+  <footer class="footer" id="footer"></footer>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/app.js"></script>
+  <script>
+    async function loadCart() {
+      const user = getUser();
+      if (!user) {
+        document.getElementById('cartItems').innerHTML = '<div class="empty-state"><div class="empty-state-icon">🔒</div><h3>Giriş yapmalısınız</h3><p>Sepetinizi görmek için giriş yapın</p><a href="/auth.html" class="btn btn-primary" style="margin-top:1rem">Giriş Yap</a></div>';
+        return;
+      }
+      try {
+        const data = await api.getCart();
+        if (data.items.length === 0) {
+          document.getElementById('cartItems').innerHTML = '<div class="empty-state"><div class="empty-state-icon">🛒</div><h3>Sepetiniz boş</h3><p>Harika robotik ürünleri keşfedin!</p><a href="/products.html" class="btn btn-primary" style="margin-top:1rem">Alışverişe Başla</a></div>';
+          document.getElementById('cartSummary').style.display = 'none';
+          return;
+        }
+
+        document.getElementById('cartItems').innerHTML = data.items.map(item => {
+          const price = item.discount_price || item.price;
+          return `
+            <div class="cart-item" id="cartItem${item.id}">
+              <div class="cart-item-img">
+                ${item.image_url ? `<img src="${item.image_url}" alt="${item.name}" onerror="this.style.display='none'">` : '🤖'}
+              </div>
+              <div class="cart-item-info">
+                <div class="cart-item-name" onclick="window.location.href='/product-detail.html?id=${item.slug}'">${item.name}</div>
+                <div style="color:var(--text-muted);font-size:0.8rem;margin-bottom:var(--space-sm)">${item.category_name}</div>
+                <div class="cart-item-price">${formatPrice(price)}</div>
+              </div>
+              <div class="cart-item-actions">
+                <button class="qty-btn" onclick="updateQty(${item.id}, ${item.quantity - 1})" style="width:32px;height:32px;background:var(--bg-tertiary);border:1px solid var(--border-color);border-radius:var(--radius-sm);color:var(--text-primary);cursor:pointer">−</button>
+                <span style="width:30px;text-align:center;font-weight:600">${item.quantity}</span>
+                <button class="qty-btn" onclick="updateQty(${item.id}, ${item.quantity + 1})" style="width:32px;height:32px;background:var(--bg-tertiary);border:1px solid var(--border-color);border-radius:var(--radius-sm);color:var(--text-primary);cursor:pointer">+</button>
+                <button onclick="removeItem(${item.id})" style="background:none;border:none;color:var(--accent-red);cursor:pointer;font-size:1.1rem;margin-left:var(--space-sm)" title="Kaldır">🗑️</button>
+              </div>
+            </div>`;
+        }).join('');
+
+        // Summary
+        const subtotal = data.total;
+        const shipping = subtotal > 5000 ? 0 : 250;
+        const total = subtotal + shipping;
+        document.getElementById('summaryContent').innerHTML = `
+          <div class="summary-row"><span>Ara Toplam</span><span>${formatPrice(subtotal)}</span></div>
+          <div class="summary-row"><span>Kargo</span><span>${shipping === 0 ? '<span style="color:var(--accent-green)">Ücretsiz</span>' : formatPrice(shipping)}</span></div>
+          <div class="summary-row summary-total"><span>Toplam</span><span class="total-price">${formatPrice(total)}</span></div>
+        `;
+        document.getElementById('cartSummary').style.display = 'block';
+      } catch (err) {
+        document.getElementById('cartItems').innerHTML = '<p style="color:var(--accent-red)">Sepet yüklenemedi.</p>';
+      }
+    }
+
+    async function updateQty(id, qty) {
+      if (qty < 1) { removeItem(id); return; }
+      try { await api.updateCartItem(id, qty); loadCart(); updateCartBadge(); } catch (err) { showToast(err.message, 'error'); }
+    }
+
+    async function removeItem(id) {
+      try { await api.removeFromCart(id); showToast('Ürün sepetten çıkarıldı.', 'info'); loadCart(); updateCartBadge(); } catch (err) { showToast(err.message, 'error'); }
+    }
+
+    async function clearCartAll() {
+      if (!confirm('Sepetiniz temizlenecek. Emin misiniz?')) return;
+      try { await api.clearCart(); showToast('Sepet temizlendi.', 'info'); loadCart(); updateCartBadge(); } catch (err) { showToast(err.message, 'error'); }
+    }
+
+    document.addEventListener('DOMContentLoaded', loadCart);
+  </script>
+</body>
+</html>

@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="RoboShop robotik ürün kataloğu. Filtreleme, arama ve sıralama ile ihtiyacınıza uygun robotu bulun.">
+  <title>Ürünler | RoboShop</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🤖</text></svg>">
+  <link rel="stylesheet" href="/css/index.css">
+  <link rel="stylesheet" href="/css/components.css">
+  <style>
+    .products-layout { display: grid; grid-template-columns: 280px 1fr; gap: var(--space-xl); padding: var(--space-2xl) 0; }
+    .filters-panel { position: sticky; top: calc(var(--nav-height) + 1rem); height: fit-content; }
+    .filter-group { margin-bottom: var(--space-xl); }
+    .filter-group h4 { font-size: 0.9rem; color: var(--text-secondary); margin-bottom: var(--space-md); font-weight: 600; }
+    .filter-option { display: flex; align-items: center; gap: var(--space-sm); padding: 0.4rem 0; cursor: pointer; color: var(--text-muted); transition: color var(--transition-fast); font-size: 0.9rem; }
+    .filter-option:hover, .filter-option.active { color: var(--accent-blue); }
+    .filter-option input[type="radio"] { accent-color: var(--accent-blue); }
+    .price-inputs { display: flex; gap: var(--space-sm); align-items: center; }
+    .price-inputs input { width: 100%; padding: 0.5rem; background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: var(--radius-sm); color: var(--text-primary); font-size: 0.85rem; }
+    .search-bar { display: flex; gap: var(--space-sm); margin-bottom: var(--space-lg); }
+    .search-bar input { flex: 1; }
+    .products-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-lg); flex-wrap: wrap; gap: var(--space-md); }
+    .results-count { color: var(--text-muted); font-size: 0.9rem; }
+    @media (max-width: 768px) { .products-layout { grid-template-columns: 1fr; } .filters-panel { position: static; } }
+  </style>
+</head>
+<body>
+  <header class="navbar" id="navbar"></header>
+
+  <div class="page-header">
+    <div class="container">
+      <div class="breadcrumb" id="breadcrumbText"><a href="/">Ana Sayfa</a> <span>/</span> <span id="bcCategory">Ürünler</span></div>
+      <h1 id="pageTitle">Ürün <span class="text-gradient">Kataloğu</span></h1>
+    </div>
+  </div>
+
+  <main class="container">
+    <div class="products-layout">
+      <!-- Filters -->
+      <aside class="filters-panel glass-card" style="padding:var(--space-lg)">
+        <div class="search-bar">
+          <input type="text" class="form-input" placeholder="🔍 Ürün ara..." id="searchInput">
+        </div>
+        <div class="filter-group">
+          <h4>📂 Kategoriler</h4>
+          <div id="categoryFilters"><div class="spinner" style="transform:scale(0.5)"></div></div>
+        </div>
+        <div class="filter-group">
+          <h4>💰 Fiyat Aralığı</h4>
+          <div class="price-inputs">
+            <input type="number" placeholder="Min" id="minPrice">
+            <span style="color:var(--text-muted)">-</span>
+            <input type="number" placeholder="Max" id="maxPrice">
+          </div>
+          <button class="btn btn-secondary btn-sm" style="width:100%;margin-top:var(--space-sm)" onclick="applyFilters()">Uygula</button>
+        </div>
+        <div class="filter-group">
+          <h4>📊 Sıralama</h4>
+          <label class="filter-option"><input type="radio" name="sort" value="newest" checked> En Yeni</label>
+          <label class="filter-option"><input type="radio" name="sort" value="price_asc"> Fiyat (Düşükten Yükseğe)</label>
+          <label class="filter-option"><input type="radio" name="sort" value="price_desc"> Fiyat (Yüksekten Düşüğe)</label>
+          <label class="filter-option"><input type="radio" name="sort" value="rating"> En Yüksek Puan</label>
+          <label class="filter-option"><input type="radio" name="sort" value="name"> İsim (A-Z)</label>
+        </div>
+        <button class="btn btn-secondary" style="width:100%" onclick="clearFilters()">🗑️ Filtreleri Temizle</button>
+      </aside>
+
+      <!-- Products Grid -->
+      <div>
+        <div class="products-header">
+          <span class="results-count" id="resultsCount"></span>
+        </div>
+        <div class="grid grid-3" id="productsGrid"><div class="spinner"></div></div>
+        <div class="pagination" id="pagination"></div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="footer" id="footer"></footer>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/app.js"></script>
+  <script>
+    let currentPage = 1;
+    const urlParams = new URLSearchParams(window.location.search);
+    let currentCategory = urlParams.get('category') || '';
+
+    function getFilters() {
+      const params = {};
+      if (currentCategory) params.category = currentCategory;
+      const search = document.getElementById('searchInput').value.trim();
+      if (search) params.search = search;
+      const sort = document.querySelector('input[name="sort"]:checked')?.value;
+      if (sort) params.sort = sort;
+      const minPrice = document.getElementById('minPrice').value;
+      const maxPrice = document.getElementById('maxPrice').value;
+      if (minPrice) params.min_price = minPrice;
+      if (maxPrice) params.max_price = maxPrice;
+      params.page = currentPage;
+      params.limit = 12;
+      return params;
+    }
+
+    async function loadProducts() {
+      const grid = document.getElementById('productsGrid');
+      grid.innerHTML = '<div class="spinner"></div>';
+      try {
+        const data = await api.getProducts(getFilters());
+        if (data.products.length === 0) {
+          grid.innerHTML = '<div class="empty-state"><div class="empty-state-icon">🔍</div><h3>Ürün bulunamadı</h3><p>Farklı filtreler deneyin</p></div>';
+        } else {
+          grid.innerHTML = data.products.map(p => productCardHTML(p)).join('');
+        }
+        document.getElementById('resultsCount').textContent = `${data.pagination.total} ürün bulundu`;
+        renderPagination(data.pagination);
+      } catch (err) {
+        grid.innerHTML = '<p style="color:var(--accent-red)">Ürünler yüklenemedi.</p>';
+      }
+    }
+
+    function renderPagination(pg) {
+      const container = document.getElementById('pagination');
+      if (pg.totalPages <= 1) { container.innerHTML = ''; return; }
+      let html = '';
+      if (pg.page > 1) html += `<button onclick="goToPage(${pg.page - 1})">← Önceki</button>`;
+      for (let i = 1; i <= pg.totalPages; i++) {
+        html += `<button class="${i === pg.page ? 'active' : ''}" onclick="goToPage(${i})">${i}</button>`;
+      }
+      if (pg.page < pg.totalPages) html += `<button onclick="goToPage(${pg.page + 1})">Sonraki →</button>`;
+      container.innerHTML = html;
+    }
+
+    function goToPage(page) { currentPage = page; loadProducts(); window.scrollTo({ top: 200, behavior: 'smooth' }); }
+    function applyFilters() { currentPage = 1; loadProducts(); }
+    function clearFilters() {
+      document.getElementById('searchInput').value = '';
+      document.getElementById('minPrice').value = '';
+      document.getElementById('maxPrice').value = '';
+      document.querySelector('input[name="sort"][value="newest"]').checked = true;
+      currentCategory = '';
+      document.querySelectorAll('.cat-filter').forEach(el => el.classList.remove('active'));
+      document.querySelector('.cat-filter')?.classList.add('active');
+      currentPage = 1;
+      loadProducts();
+      history.pushState(null, '', '/products.html');
+    }
+
+    async function loadCategoryFilters() {
+      try {
+        const data = await api.getCategories();
+        const container = document.getElementById('categoryFilters');
+        let html = `<div class="filter-option cat-filter active" onclick="selectCategory('', this)">Tümü</div>`;
+        data.categories.forEach(cat => {
+          html += `<div class="filter-option cat-filter" onclick="selectCategory('${cat.slug}', this)">${cat.icon} ${cat.name} <span style="margin-left:auto;font-size:0.75rem;color:var(--text-muted)">(${cat.product_count})</span></div>`;
+        });
+        container.innerHTML = html;
+
+        if (currentCategory) {
+          document.querySelectorAll('.cat-filter').forEach(el => el.classList.remove('active'));
+          const target = [...document.querySelectorAll('.cat-filter')].find(el => el.onclick?.toString().includes(currentCategory));
+          if (target) {
+             target.classList.add('active');
+             // Update page header to make it look like a distinct category page
+             const catName = data.categories.find(c => c.slug === currentCategory)?.name || 'Ürünler';
+             document.getElementById('bcCategory').textContent = catName;
+             document.getElementById('pageTitle').innerHTML = catName.replace(/ ([^ ]+)$/, ' <span class="text-gradient">$1</span>');
+          }
+        } else {
+             document.getElementById('bcCategory').textContent = 'Ürünler';
+             document.getElementById('pageTitle').innerHTML = 'Ürün <span class="text-gradient">Kataloğu</span>';
+        }
+      } catch (err) {
+        document.getElementById('categoryFilters').innerHTML = '<p>Yüklenemedi</p>';
+      }
+    }
+
+    function selectCategory(slug, el) {
+      currentCategory = slug;
+      currentPage = 1;
+      document.querySelectorAll('.cat-filter').forEach(e => e.classList.remove('active'));
+      el.classList.add('active');
+      
+      const catName = el.textContent.trim().split('(')[0].trim() || 'Ürünler';
+      if(slug) {
+         document.getElementById('bcCategory').textContent = catName;
+         document.getElementById('pageTitle').innerHTML = catName.replace(/ ([^ ]+)$/, ' <span class="text-gradient">$1</span>');
+      } else {
+         document.getElementById('bcCategory').textContent = 'Ürünler';
+         document.getElementById('pageTitle').innerHTML = 'Ürün <span class="text-gradient">Kataloğu</span>';
+      }
+      
+      loadProducts();
+    }
+
+    // Search debounce
+    let searchTimeout;
+    document.addEventListener('DOMContentLoaded', () => {
+      loadCategoryFilters();
+      loadProducts();
+      document.getElementById('searchInput').addEventListener('input', () => {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => { currentPage = 1; loadProducts(); }, 400);
+      });
+      document.querySelectorAll('input[name="sort"]').forEach(r => r.addEventListener('change', applyFilters));
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Siparişlerim | RoboShop</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🤖</text></svg>">
+  <link rel="stylesheet" href="/css/index.css">
+  <link rel="stylesheet" href="/css/components.css">
+  <style>
+    .order-card { margin-bottom: var(--space-lg); cursor: pointer; }
+    .order-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: var(--space-sm); margin-bottom: var(--space-md); }
+    .order-id { font-family: var(--font-display); font-weight: 700; color: var(--accent-blue); }
+    .order-date { color: var(--text-muted); font-size: 0.85rem; }
+    .order-items-list { border-top: 1px solid var(--border-color); padding-top: var(--space-md); }
+    .order-detail-item { display: flex; justify-content: space-between; padding: 0.4rem 0; font-size: 0.9rem; color: var(--text-secondary); }
+    .status-label { display: inline-flex; align-items: center; gap: 4px; padding: 0.3rem 0.8rem; border-radius: var(--radius-xl); font-size: 0.8rem; font-weight: 600; }
+    .status-label.pending { background: rgba(245,158,11,0.15); color: var(--accent-orange); }
+    .status-label.processing { background: rgba(0,212,255,0.15); color: var(--accent-blue); }
+    .status-label.shipped { background: rgba(124,58,237,0.15); color: var(--accent-purple); }
+    .status-label.delivered { background: rgba(16,185,129,0.15); color: var(--accent-green); }
+    .status-label.cancelled { background: rgba(239,68,68,0.15); color: var(--accent-red); }
+  </style>
+</head>
+<body>
+  <header class="navbar" id="navbar"></header>
+  <div class="page-header">
+    <div class="container">
+      <div class="breadcrumb"><a href="/">Ana Sayfa</a> <span>/</span> <span>Siparişlerim</span></div>
+      <h1>Sipariş <span class="text-gradient">Geçmişim</span></h1>
+    </div>
+  </div>
+
+  <main class="container" style="padding:var(--space-2xl) 0;min-height:50vh">
+    <div id="ordersContent"><div class="spinner"></div></div>
+  </main>
+
+  <!-- Order Detail Modal -->
+  <div class="modal-overlay" id="orderModal">
+    <div class="modal" style="max-width:600px">
+      <div class="modal-header"><h3 id="modalOrderTitle">Sipariş Detayı</h3><button class="modal-close" onclick="closeModal()">✕</button></div>
+      <div class="modal-body" id="modalOrderBody"></div>
+    </div>
+  </div>
+
+  <footer class="footer" id="footer"></footer>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/app.js"></script>
+  <script>
+    const statusMap = { pending: '⏳ Beklemede', processing: '🔄 Hazırlanıyor', shipped: '🚚 Kargoda', delivered: '✅ Teslim Edildi', cancelled: '❌ İptal' };
+
+    async function loadOrders() {
+      const user = getUser();
+      if (!user) { window.location.href = '/auth.html'; return; }
+      try {
+        const data = await api.getOrders();
+        if (data.orders.length === 0) {
+          document.getElementById('ordersContent').innerHTML = '<div class="empty-state"><div class="empty-state-icon">📦</div><h3>Henüz siparişiniz yok</h3><p>İlk siparişinizi verin!</p><a href="/products.html" class="btn btn-primary" style="margin-top:1rem">Alışverişe Başla</a></div>';
+          return;
+        }
+        document.getElementById('ordersContent').innerHTML = data.orders.map(order => `
+          <div class="glass-card order-card" onclick="showOrderDetail(${order.id})">
+            <div class="order-header">
+              <div>
+                <span class="order-id">Sipariş #${order.id}</span>
+                <span class="order-date"> — ${new Date(order.created_at).toLocaleDateString('tr-TR', {year:'numeric',month:'long',day:'numeric'})}</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:var(--space-md)">
+                <span class="status-label ${order.status}">${statusMap[order.status] || order.status}</span>
+                <span style="font-family:var(--font-display);font-weight:700;color:var(--accent-blue)">${formatPrice(order.total)}</span>
+              </div>
+            </div>
+            <div style="color:var(--text-muted);font-size:0.85rem">
+              📍 ${order.shipping_city || ''} • 💳 ${order.payment_method === 'credit_card' ? 'Kredi Kartı' : order.payment_method === 'bank_transfer' ? 'Havale/EFT' : 'Kapıda Ödeme'}
+            </div>
+          </div>
+        `).join('');
+      } catch (err) { document.getElementById('ordersContent').innerHTML = '<p style="color:var(--accent-red)">Siparişler yüklenemedi.</p>'; }
+    }
+
+    async function showOrderDetail(id) {
+      try {
+        const data = await api.getOrder(id);
+        document.getElementById('modalOrderTitle').textContent = `Sipariş #${data.order.id}`;
+        document.getElementById('modalOrderBody').innerHTML = `
+          <div style="margin-bottom:var(--space-lg)">
+            <span class="status-label ${data.order.status}">${statusMap[data.order.status]}</span>
+            <span style="color:var(--text-muted);font-size:0.85rem;margin-left:var(--space-sm)">${new Date(data.order.created_at).toLocaleString('tr-TR')}</span>
+          </div>
+          <h4 style="margin-bottom:var(--space-md)">Ürünler</h4>
+          ${data.items.map(i => `<div class="order-detail-item"><span>${i.product_name} x${i.quantity}</span><span style="color:var(--accent-blue)">${formatPrice(i.price * i.quantity)}</span></div>`).join('')}
+          <div style="display:flex;justify-content:space-between;padding:var(--space-md) 0;font-weight:800;font-size:1.1rem;border-top:2px solid var(--border-color);margin-top:var(--space-md)">
+            <span>Toplam</span><span style="color:var(--accent-blue);font-family:var(--font-display)">${formatPrice(data.order.total)}</span>
+          </div>
+          <div style="margin-top:var(--space-lg);padding:var(--space-md);background:var(--bg-tertiary);border-radius:var(--radius-md);font-size:0.9rem;color:var(--text-secondary)">
+            <strong>Teslimat:</strong> ${data.order.shipping_name}<br>
+            📍 ${data.order.shipping_address}, ${data.order.shipping_city}<br>
+            📞 ${data.order.shipping_phone}
+          </div>
+        `;
+        document.getElementById('orderModal').classList.add('active');
+      } catch (err) { showToast('Sipariş detayı yüklenemedi.', 'error'); }
+    }
+
+    function closeModal() { document.getElementById('orderModal').classList.remove('active'); }
+    document.getElementById('orderModal').addEventListener('click', (e) => { if (e.target === e.currentTarget) closeModal(); });
+
+    document.addEventListener('DOMContentLoaded', loadOrders);
+  </script>
+</body>
+</html>
