@@ -1,5 +1,34 @@
 /* RoboShop - Global App Logic */
 
+// --- Theme Initialization ---
+(function initTheme() {
+  const savedTheme = localStorage.getItem('theme');
+  if (savedTheme === 'dark') {
+    document.documentElement.setAttribute('data-theme', 'dark');
+  } else {
+    document.documentElement.removeAttribute('data-theme');
+  }
+})();
+
+function toggleTheme() {
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  if (isDark) {
+    document.documentElement.removeAttribute('data-theme');
+    localStorage.setItem('theme', 'light');
+  } else {
+    document.documentElement.setAttribute('data-theme', 'dark');
+    localStorage.setItem('theme', 'dark');
+  }
+  updateThemeIcon();
+}
+
+function updateThemeIcon() {
+  const btn = document.getElementById('themeToggleBtn');
+  if (!btn) return;
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  btn.innerHTML = isDark ? '☀️' : '🌙';
+}
+
 // --- Toast Notification System ---
 function showToast(message, type = 'info') {
   let container = document.querySelector('.toast-container');
@@ -43,6 +72,8 @@ function renderNavbar() {
   const nav = document.getElementById('navbar');
   if (!nav) return;
 
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+
   nav.innerHTML = `
     <div class="container">
       <a href="/" class="nav-logo">
@@ -56,6 +87,9 @@ function renderNavbar() {
         <a href="/products.html?category=drone-sistemleri" class="nav-link">Droneler</a>
       </nav>
       <div class="nav-actions">
+        <button class="btn-icon" onclick="toggleTheme()" id="themeToggleBtn" title="Tema Değiştir" style="background:transparent;border:none;font-size:1.3rem;cursor:pointer;padding:0.4rem;display:flex;align-items:center;">
+          ${isDark ? '☀️' : '🌙'}
+        </button>
         <button class="nav-cart-btn" onclick="window.location.href='/cart.html'" title="Sepet" id="navCartBtn">
           🛒<span class="cart-badge" id="cartBadge" style="display:none">0</span>
         </button>
